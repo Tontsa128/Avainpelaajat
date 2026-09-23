@@ -99,7 +99,7 @@ export function registerSuperBookerRoutes(router,{db}){
     const history=store.listRecords(db,ctx.orgId,'time').map(x=>({...x,sales:x.sales??x.salesCount??0,hours:x.hours??x.workHours??0}));
     return planForSeller({seller,places,bookings,salesHistory:history,year,month,options:{
       radiusKm:Number(b.radiusKm||seller.radiusKm||100),minBlockDays:Number(b.minBlockDays||seller.minBlockDays||1),maxBlockDays:Number(b.maxBlockDays||seller.maxBlockDays||2),
-      avoidWeekends:b.avoidWeekends!==false,maxCandidates:100
+      avoidWeekends:b.avoidWeekends!==false,maxCandidates:100,travelCostPerKm:Number(b.travelCostPerKm??seller.travelCostPerKm)||undefined,salesValuePerSale:Number(b.salesValuePerSale??seller.salesValuePerSale)||undefined,priceReference:Number(b.priceReference??seller.priceReference)||undefined
     }});
   });
 
@@ -111,7 +111,7 @@ export function registerSuperBookerRoutes(router,{db}){
         const sellerId=reqStr(raw.sellerId,'sellerId',1,120),placeId=reqStr(raw.placeId,'placeId',1,120),date=reqStr(raw.date,'date',10,10);if(!isDate(date))throw bad('Päivämäärä on virheellinen.');
         const seller=sellerFor(db,ctx.orgId,sellerId),place=placeFor(db,ctx.orgId,placeId);if(!seller||!place)throw new HttpError(404,'not_found','Myyjää tai kauppapaikkaa ei löydy.');
         const sh=defaultShift(seller),start=raw.start&&isTime(raw.start)?raw.start:sh.start,end=raw.end&&isTime(raw.end)?raw.end:sh.end;if(minutes(end)<=minutes(start))throw bad('Työvuoron päättymisaika pitää olla aloitusta myöhemmin.');
-        const stand=raw.stand||(place.stands?.[0]?.id)||'A';const booking={id:newId('bk'),sellerId,placeId,date,start,end,stand,status:'tentative',campaign:raw.campaign||'',source:'super-buukkaaja-ai'};
+        const stand=raw.stand||(place.stands?.[0]?.id)||'A';const booking={id:newId('bk'),sellerId,placeId,date,start,end,stand,status:'tentative',campaign:raw.campaign||'',source:'super-buukkaaja-ai',economics:raw.economics||null};
         const p=bookingProblems(db,ctx.orgId,booking);if(p.length){conflicts.push({item:raw,conflicts:p});continue;}
         store.upsertEntity(db,ctx.orgId,'bookings',booking,store.nextPos(db,ctx.orgId,'bookings'));created.push(booking);
       }
