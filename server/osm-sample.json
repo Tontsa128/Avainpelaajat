@@ -1,8 +1,403 @@
 [
- {"id":"poi-helsinki-1","name":"Mall of Tripla","city":"Helsinki","kind":"shopping_centre","lat":60.2055,"lon":24.9992},
- {"id":"poi-espoo-1","name":"Sello","city":"Espoo","kind":"shopping_centre","lat":60.2187,"lon":24.8139},
- {"id":"poi-vantaa-1","name":"Jumbo","city":"Vantaa","kind":"shopping_centre","lat":60.2933,"lon":24.9652},
- {"id":"poi-turku-1","name":"Hansa","city":"Turku","kind":"shopping_centre","lat":60.4518,"lon":22.2666},
- {"id":"poi-tampere-1","name":"Ratina","city":"Tampere","kind":"shopping_centre","lat":61.4946,"lon":23.7681},
- {"id":"poi-oulu-1","name":"Valkea","city":"Oulu","kind":"shopping_centre","lat":65.0122,"lon":25.4699}
+  {
+    "type": "node",
+    "id": "node/1",
+    "lat": 60.12,
+    "lon": 24.88,
+    "tags": {
+      "kind": "fuel",
+      "name": "Vain Merkki",
+      "city": "Helsinki",
+      "addr:city": "Helsinki",
+      "address": "Testikatu 1",
+      "hours": "24/7"
+    }
+  },
+  {
+    "type": "node",
+    "id": "node/2",
+    "lat": 60.132,
+    "lon": 24.892,
+    "tags": {
+      "kind": "fuel",
+      "name": "Esimerkki Huoltoasema 2 Helsinki",
+      "city": "Helsinki",
+      "addr:city": "Helsinki",
+      "address": "Testikatu 2",
+      "hours": "24/7"
+    }
+  },
+  {
+    "type": "node",
+    "id": "node/3",
+    "lat": 60.144,
+    "lon": 24.904,
+    "tags": {
+      "kind": "fuel",
+      "name": "Esimerkki Huoltoasema 3 Helsinki",
+      "city": "Helsinki",
+      "addr:city": "Helsinki",
+      "address": "Testikatu 3",
+      "hours": "24/7"
+    }
+  },
+  {
+    "type": "node",
+    "id": "node/4",
+    "lat": 60.156,
+    "lon": 24.916,
+    "tags": {
+      "kind": "fuel",
+      "name": "Esimerkki Huoltoasema 4 Helsinki",
+      "city": "Helsinki",
+      "addr:city": "Helsinki",
+      "address": "Testikatu 4",
+      "hours": "24/7"
+    }
+  },
+  {
+    "type": "node",
+    "id": "node/5",
+    "lat": 60.168,
+    "lon": 24.928,
+    "tags": {
+      "kind": "fuel",
+      "name": "Esimerkki Huoltoasema 5 Helsinki",
+      "city": "Helsinki",
+      "addr:city": "Helsinki",
+      "address": "Testikatu 5",
+      "hours": "24/7"
+    }
+  },
+  {
+    "type": "node",
+    "id": "node/6",
+    "lat": 60.18,
+    "lon": 24.939999999999998,
+    "tags": {
+      "kind": "fuel",
+      "name": "Esimerkki Huoltoasema 6 Helsinki",
+      "city": "Helsinki",
+      "addr:city": "Helsinki",
+      "address": "Testikatu 6",
+      "hours": "24/7"
+    }
+  },
+  {
+    "type": "node",
+    "id": "node/7",
+    "lat": 60.192,
+    "lon": 24.951999999999998,
+    "tags": {
+      "kind": "fuel",
+      "name": "Esimerkki Huoltoasema 7 Helsinki",
+      "city": "Helsinki",
+      "addr:city": "Helsinki",
+      "address": "Testikatu 7",
+      "hours": "24/7"
+    }
+  },
+  {
+    "type": "node",
+    "id": "node/8",
+    "lat": 60.204,
+    "lon": 24.964,
+    "tags": {
+      "kind": "fuel",
+      "name": "Esimerkki Huoltoasema 8 Helsinki",
+      "city": "Helsinki",
+      "addr:city": "Helsinki",
+      "address": "Testikatu 8",
+      "hours": "24/7"
+    }
+  },
+  {
+    "type": "node",
+    "id": "node/9",
+    "lat": 60.216,
+    "lon": 24.976,
+    "tags": {
+      "kind": "fuel",
+      "name": "Esimerkki Huoltoasema 9 Helsinki",
+      "city": "Helsinki",
+      "addr:city": "Helsinki",
+      "address": "Testikatu 9",
+      "hours": "24/7"
+    }
+  },
+  {
+    "type": "node",
+    "id": "node/10",
+    "lat": 60.227999999999994,
+    "lon": 24.988,
+    "tags": {
+      "kind": "fuel",
+      "name": "Esimerkki Huoltoasema 10 Helsinki",
+      "city": "Helsinki",
+      "addr:city": "Helsinki",
+      "address": "Testikatu 10",
+      "hours": "24/7"
+    }
+  },
+  {
+    "type": "node",
+    "id": "node/11",
+    "lat": 60.239999999999995,
+    "lon": 25,
+    "tags": {
+      "kind": "fuel",
+      "name": "Esimerkki Huoltoasema 11 Helsinki",
+      "city": "Helsinki",
+      "addr:city": "Helsinki",
+      "address": "Testikatu 11",
+      "hours": "24/7"
+    }
+  },
+  {
+    "type": "node",
+    "id": "node/12",
+    "lat": 60.14,
+    "lon": 24.9,
+    "tags": {
+      "kind": "supermarket",
+      "name": "Supermarket Helsinki 1",
+      "city": "Helsinki",
+      "addr:city": "Helsinki",
+      "address": "Marketkatu 1"
+    }
+  },
+  {
+    "type": "node",
+    "id": "node/13",
+    "lat": 60.15,
+    "lon": 24.907999999999998,
+    "tags": {
+      "kind": "supermarket",
+      "name": "Supermarket Helsinki 2",
+      "city": "Helsinki",
+      "addr:city": "Helsinki",
+      "address": "Marketkatu 2"
+    }
+  },
+  {
+    "type": "node",
+    "id": "node/14",
+    "lat": 60.160000000000004,
+    "lon": 24.915999999999997,
+    "tags": {
+      "kind": "supermarket",
+      "name": "Supermarket Helsinki 3",
+      "city": "Helsinki",
+      "addr:city": "Helsinki",
+      "address": "Marketkatu 3"
+    }
+  },
+  {
+    "type": "node",
+    "id": "node/15",
+    "lat": 60.17,
+    "lon": 24.924,
+    "tags": {
+      "kind": "supermarket",
+      "name": "Supermarket Helsinki 4",
+      "city": "Helsinki",
+      "addr:city": "Helsinki",
+      "address": "Marketkatu 4"
+    }
+  },
+  {
+    "type": "node",
+    "id": "node/16",
+    "lat": 60.18,
+    "lon": 24.932,
+    "tags": {
+      "kind": "supermarket",
+      "name": "Supermarket Helsinki 5",
+      "city": "Helsinki",
+      "addr:city": "Helsinki",
+      "address": "Marketkatu 5"
+    }
+  },
+  {
+    "type": "node",
+    "id": "node/17",
+    "lat": 60.19,
+    "lon": 24.939999999999998,
+    "tags": {
+      "kind": "supermarket",
+      "name": "Supermarket Helsinki 6",
+      "city": "Helsinki",
+      "addr:city": "Helsinki",
+      "address": "Marketkatu 6"
+    }
+  },
+  {
+    "type": "node",
+    "id": "node/18",
+    "lat": 60.2,
+    "lon": 24.947999999999997,
+    "tags": {
+      "kind": "supermarket",
+      "name": "Supermarket Helsinki 7",
+      "city": "Helsinki",
+      "addr:city": "Helsinki",
+      "address": "Marketkatu 7"
+    }
+  },
+  {
+    "type": "node",
+    "id": "node/19",
+    "lat": 61.49,
+    "lon": 23.74,
+    "tags": {
+      "kind": "supermarket",
+      "name": "Supermarket Tampere 1",
+      "city": "Tampere",
+      "addr:city": "Tampere",
+      "address": "Tampereentie 1"
+    }
+  },
+  {
+    "type": "node",
+    "id": "node/20",
+    "lat": 61.498000000000005,
+    "lon": 23.747999999999998,
+    "tags": {
+      "kind": "supermarket",
+      "name": "Supermarket Tampere 2",
+      "city": "Tampere",
+      "addr:city": "Tampere",
+      "address": "Tampereentie 2"
+    }
+  },
+  {
+    "type": "node",
+    "id": "node/21",
+    "lat": 61.506,
+    "lon": 23.755999999999997,
+    "tags": {
+      "kind": "supermarket",
+      "name": "Supermarket Tampere 3",
+      "city": "Tampere",
+      "addr:city": "Tampere",
+      "address": "Tampereentie 3"
+    }
+  },
+  {
+    "type": "way",
+    "id": "way/22",
+    "lat": 60.19,
+    "lon": 24.94,
+    "tags": {
+      "kind": "mall",
+      "name": "Esimerkki Kauppakeskus Helsinki",
+      "city": "Helsinki",
+      "addr:city": "Helsinki",
+      "address": "Keskuskatu 1"
+    }
+  },
+  {
+    "type": "way",
+    "id": "way/23",
+    "lat": 60.218,
+    "lon": 24.814,
+    "tags": {
+      "kind": "mall",
+      "name": "Esimerkki Kauppakeskus Espoo",
+      "city": "Espoo",
+      "addr:city": "Espoo",
+      "address": "Kauppakeskuskuja 1"
+    }
+  },
+  {
+    "type": "way",
+    "id": "way/24",
+    "lat": 61.5,
+    "lon": 23.76,
+    "tags": {
+      "kind": "mall",
+      "name": "Esimerkki Kauppakeskus Tampere",
+      "city": "Tampere",
+      "addr:city": "Tampere",
+      "address": "Hämeenkatu 1"
+    }
+  },
+  {
+    "type": "way",
+    "id": "way/25",
+    "lat": 60.17,
+    "lon": 24.94,
+    "tags": {
+      "kind": "department_store",
+      "name": "Esimerkki Tavaratalo Helsinki",
+      "city": "Helsinki",
+      "addr:city": "Helsinki",
+      "address": "Tavaratalokatu 1"
+    }
+  },
+  {
+    "type": "way",
+    "id": "way/26",
+    "lat": 60.21,
+    "lon": 24.81,
+    "tags": {
+      "kind": "department_store",
+      "name": "Esimerkki Tavaratalo Espoo",
+      "city": "Espoo",
+      "addr:city": "Espoo",
+      "address": "Espoontie 1"
+    }
+  },
+  {
+    "type": "node",
+    "id": "node/27",
+    "lat": 60.16,
+    "lon": 24.92,
+    "tags": {
+      "kind": "exhibition",
+      "name": "Esimerkki Näyttely 1 Helsinki",
+      "city": "Helsinki",
+      "addr:city": "Helsinki",
+      "address": "Näyttelykatu 1"
+    }
+  },
+  {
+    "type": "node",
+    "id": "node/28",
+    "lat": 60.18,
+    "lon": 24.95,
+    "tags": {
+      "kind": "exhibition",
+      "name": "Esimerkki Näyttely 2 Helsinki",
+      "city": "Helsinki",
+      "addr:city": "Helsinki",
+      "address": "Näyttelykatu 2"
+    }
+  },
+  {
+    "type": "node",
+    "id": "node/29",
+    "lat": 61.51,
+    "lon": 23.76,
+    "tags": {
+      "kind": "exhibition",
+      "name": "Esimerkki Näyttely 3 Tampere",
+      "city": "Tampere",
+      "addr:city": "Tampere",
+      "address": "Näyttelykatu 3"
+    }
+  },
+  {
+    "type": "node",
+    "id": "node/30",
+    "lat": 61.52,
+    "lon": 23.77,
+    "tags": {
+      "kind": "exhibition",
+      "name": "Esimerkki Näyttely 4 Tampere",
+      "city": "Tampere",
+      "addr:city": "Tampere",
+      "address": "Näyttelykatu 4"
+    }
+  }
 ]
