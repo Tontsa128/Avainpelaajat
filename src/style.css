@@ -1,0 +1,1 @@
+.ap-status{display:inline-flex;align-items:center;gap:.35rem;border-radius:999px;padding:.2rem .55rem;font:600 12px/1.2 system-ui}.ap-status-free{background:#12351f}.ap-status-reserved{background:#122c4f}.ap-status-working{background:#4a3810}.ap-status-problem{background:#4a1720}
