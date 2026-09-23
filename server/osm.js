@@ -1,10 +1,59 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import {fileURLToPath} from 'node:url';
+
 export const POI_KINDS={shopping_centre:'Kauppakeskus',supermarket:'Supermarket',mall:'Kauppakeskus',department_store:'Tavaratalo',marketplace:'Kauppapaikka'};
-function load(){
-  try{return JSON.parse(fs.readFileSync(path.join(path.dirname(new URL(import.meta.url).pathname),'osm-sample.json'),'utf8'));}catch{return [];}
+
+function sampleData(){
+  try{return JSON.parse(fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)),'osm-sample.json'),'utf8'));}catch{return [];}
 }
-const sample=load();
-export function queryBbox(db,{west,south,east,north,kinds=[],q='',limit=2000}){let a=sample.filter(x=>x.lat>=south&&x.lat<=north&&x.lon>=west&&x.lon<=east);if(kinds.length)a=a.filter(x=>kinds.includes(x.kind));if(q)a=a.filter(x=>String(x.name).toLowerCase().includes(q.toLowerCase()));return a.slice(0,limit);}
-export function queryNear(db,{lat,lon,km=100,kinds=[],limit=200}){const R=6371;const d=(a,b)=>{const p=Math.PI/180;const x=(b.lon-lon)*p,y=(b.lat-lat)*p;const h=Math.sin(y/2)**2+Math.cos(lat*p)*Math.cos(b.lat*p)*Math.sin(x/2)**2;return 2*R*Math.asin(Math.sqrt(h));};let a=sample.map(x=>({...x,distanceKm:d(x,{lat:x.lat,lon:x.lon})})).filter(x=>x.distanceKm<=km);if(kinds.length)a=a.filter(x=>kinds.includes(x.kind));return a.sort((a,b)=>a.distanceKm-b.distanceKm).slice(0,limit);}
-export function poiStats(){const counts={};for(const x of sample)counts[x.kind]=(counts[x.kind]||0)+1;return {total:sample.length,counts};}
+
+export function parseOverpass(input){
+  const src=typeof input==='string'?JSON.parse(input):input;
+  const elements=Array.isArray(src?.elements)?src.elements:[];
+  return elements.map((e)=>({
+    id:String(e.id ?? e.tags?.['ref'] ?? ''),
+    name:String(e.tags?.name ?? e.name ?? 'Nimetön paikka'),
+    city:String(e.tags?.['addr:city'] ?? e.city ?? ''),
+    kind:String(e.tags?.shop==='mall'||e.tags?.amenity==='marketplace'?'shopping_centre':e.tags?.shop||e.kind||'marketplace'),
+    lat:Number(e.lat ?? e.center?.lat),
+    lon:Number(e.lon ?? e.center?.lon),
+    tags:e.tags||{}
+  })).filter(x=>x.id&&Number.isFinite(x.lat)&&Number.isFinite(x.lon));
+}
+
+export function replacePois(db,items){
+  const tx=db.transaction((rows)=>{
+    db.prepare('DELETE FROM pois').run();
+    const st=db.prepare('INSERT INTO pois(id,name,city,kind,lat,lon,data) VALUES(?,?,?,?,?,?,?)');
+    for(const x of rows)st.run(x.id,x.name||'',x.city||'',x.kind||'marketplace',x.lat,x.lon,JSON.stringify(x));
+    return rows.length;
+  });
+  return tx(items);
+}
+
+function allPois(db){
+  const rows=db.prepare('SELECT data FROM pois').all();
+  return rows.length?rows.map(r=>JSON.parse(r.data)):sampleData();
+}
+
+export function queryBbox(db,{west,south,east,north,kinds=[],q='',limit=2000}){
+  let a=allPois(db).filter(x=>x.lat>=south&&x.lat<=north&&x.lon>=west&&x.lon<=east);
+  if(kinds.length)a=a.filter(x=>kinds.includes(x.kind));
+  if(q)a=a.filter(x=>String(x.name).toLowerCase().includes(q.toLowerCase()));
+  return a.slice(0,limit);
+}
+
+export function queryNear(db,{lat,lon,km=100,kinds=[],limit=200}){
+  const R=6371,p=Math.PI/180;
+  const distance=(x)=>{const y=(x.lat-lat)*p,z=(x.lon-lon)*p;const h=Math.sin(y/2)**2+Math.cos(lat*p)*Math.cos(x.lat*p)*Math.sin(z/2)**2;return 2*R*Math.asin(Math.sqrt(h));};
+  let a=allPois(db).map(x=>({...x,distanceKm:distance(x)})).filter(x=>x.distanceKm<=km);
+  if(kinds.length)a=a.filter(x=>kinds.includes(x.kind));
+  return a.sort((x,y)=>x.distanceKm-y.distanceKm).slice(0,limit);
+}
+
+export function poiStats(db){
+  const a=allPois(db),counts={};
+  for(const x of a)counts[x.kind]=(counts[x.kind]||0)+1;
+  return {total:a.length,counts};
+}
