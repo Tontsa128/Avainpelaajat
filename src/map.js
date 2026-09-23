@@ -1,0 +1,1 @@
+export function bboxFor(points){if(!points.length)return null;const lats=points.map(x=>x.lat),lons=points.map(x=>x.lon);return {west:Math.min(...lons),south:Math.min(...lats),east:Math.max(...lons),north:Math.max(...lats)};}
