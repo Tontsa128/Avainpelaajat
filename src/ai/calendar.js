@@ -18,7 +18,7 @@ export function buildMonthlyPlan({seller,days,rankedPlaces,existingBookings=[],m
       probe++;
     }
     if(blockDates.length<Math.min(1,minBlockDays)){cursor++;continue;}
-    for(let i=0;i<blockDates.length;i++)plan.push({date:blockDates[i],sellerId:seller.id,placeId:candidate.id,placeName:candidate.name,score:candidate.score,status:'ai_suggestion',reason:i===0?'Uusi myyntijakso valittu alueen, kysynnän ja historian perusteella.':'Jatkaa samaa myyntipaikkaa 1–2 päivän jaksona.'});
+    for(let i=0;i<blockDates.length;i++)plan.push({date:blockDates[i],sellerId:seller.id,placeId:candidate.id,placeName:candidate.name,score:candidate.score,economics:candidate.economics||null,status:'ai_suggestion',reason:i===0?'Uusi myyntijakso valittu alueen, kysynnän, historian ja talouden perusteella.':'Jatkaa samaa myyntipaikkaa 1–2 päivän jaksona.'});
     lastPlaceId=candidate.id;cursor=probe;
   }
   return plan;
