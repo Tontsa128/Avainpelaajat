@@ -3,7 +3,7 @@ const n=(v,d=0)=>Number.isFinite(Number(v))?Number(v):d;
 export function scorePlace(place,{history=[],preferences={}}={}){
   const distance=n(place.distanceKm,100), radius=Math.max(1,n(preferences.radiusKm,100));
   const distanceScore=clamp(100-distance/radius*100);
-  const trafficScore=clamp(n(place.footTrafficScore,place.trafficScore,0));
+  const trafficScore=clamp(place.footTrafficScore!==undefined?n(place.footTrafficScore):n(place.trafficScore,0));
   const salesScore=clamp(n(place.salesScore,0));
   const availabilityScore=clamp(place.available===false?0:100);
   const price=n(place.pricePerDay,0), priceScore=price<=0?70:clamp(100-price);
