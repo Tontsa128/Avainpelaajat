@@ -1,0 +1,2 @@
+export function conflicts(bookings,candidate){return bookings.filter(b=>b.id!==candidate.id&&b.date===candidate.date&&b.start<candidate.end&&candidate.start<b.end&&(b.sellerId===candidate.sellerId||b.placeId===candidate.placeId));}
+export function weekDays(start){const d=new Date(start+'T00:00:00');return Array.from({length:7},(_,i)=>{const x=new Date(d);x.setDate(d.getDate()+i);return x.toISOString().slice(0,10);});}
