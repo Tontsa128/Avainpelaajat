@@ -30,8 +30,13 @@ export function countBookingsFor(db,org,type,id){const field=type==='seller'?'se
 export function findBookingConflicts(db,org,b,ignoreId=''){
   const rows=listEntity(db,org,'bookings');const toMin=t=>{const [h,m]=String(t).split(':').map(Number);return h*60+m;};const a1=toMin(b.start),a2=toMin(b.end);const out=[];
   for(const x of rows){if(x.id===ignoreId||x.date!==b.date)continue;const overlap=a1<toMin(x.end)&&toMin(x.start)<a2;if(!overlap)continue;
-    if(x.sellerId===b.sellerId)out.push({code:'seller_overlap',message:'Myyjällä on päällekkäinen varaus.',bookingId:x.id});
-    if(x.placeId===b.placeId&&(x.stand===b.stand||!x.stand||!b.stand))out.push({code:'place_overlap',message:'Kauppapaikalla on päällekkäinen varaus.',bookingId:x.id});
+    if(x.sellerId===b.sellerId)out.push({code:'seller',message:'Myyjällä on päällekkäinen varaus.',bookingId:x.id});
+    if(x.placeId===b.placeId&&(x.stand===b.stand||!x.stand||!b.stand)){
+      const place=db.prepare('SELECT data FROM entities WHERE org_id=? AND kind=\'places\' AND id=?').get(org,b.placeId);
+      const p=place?JSON.parse(place.data):null;const stand=(p?.stands||[]).find(s=>s.id===b.stand);const cap=Number(stand?.capacity)||4;
+      const concurrent=rows.filter(y=>y.id!==ignoreId&&y.id!==b.id&&y.date===b.date&&y.placeId===b.placeId&&y.stand===b.stand&&a1<toMin(y.end)&&toMin(y.start)<a2).length;
+      if(concurrent>=cap)out.push({code:'stand',message:'Ständin kapasiteetti on täynnä.',bookingId:x.id});
+    }
   } return out;
 }
 export function bumpRev(db,org){db.prepare('UPDATE organizations SET rev=rev+1 WHERE id=?').run(org);}
