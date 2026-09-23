@@ -13,7 +13,7 @@ export function parseOverpass(input){
   const elements=Array.isArray(src?.elements)?src.elements:[];
   return elements.map((e)=>({
     id:String(e.id ?? e.tags?.['ref'] ?? ''),
-    name:String(e.tags?.name ?? e.name ?? 'Nimetön paikka'),
+    name:String(e.tags?.name ?? e.tags?.brand ?? e.name ?? 'Nimetön paikka'),
     city:String(e.tags?.['addr:city'] ?? e.city ?? ''),
     kind:String(e.tags?.kind || (e.tags?.shop==='mall'?'mall':e.tags?.shop) || e.kind || 'marketplace'),
     lat:Number(e.lat ?? e.center?.lat),
