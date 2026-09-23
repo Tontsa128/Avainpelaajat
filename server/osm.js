@@ -15,10 +15,12 @@ export function parseOverpass(input){
     id:String(e.id ?? e.tags?.['ref'] ?? ''),
     name:String(e.tags?.name ?? e.name ?? 'Nimetön paikka'),
     city:String(e.tags?.['addr:city'] ?? e.city ?? ''),
-    kind:String(e.tags?.shop==='mall'||e.tags?.amenity==='marketplace'?'shopping_centre':e.tags?.shop||e.kind||'marketplace'),
+    kind:String(e.tags?.kind || (e.tags?.shop==='mall'?'mall':e.tags?.shop) || e.kind || 'marketplace'),
     lat:Number(e.lat ?? e.center?.lat),
     lon:Number(e.lon ?? e.center?.lon),
-    tags:e.tags||{}
+    tags:e.tags||{},
+    address:String(e.tags?.address || e.tags?.['addr:street'] || ''),
+    hours:String(e.tags?.hours || '')
   })).filter(x=>x.id&&Number.isFinite(x.lat)&&Number.isFinite(x.lon));
 }
 
