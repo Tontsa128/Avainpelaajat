@@ -1355,4 +1355,30 @@ VIEWS.mobiili=function(){
       ${(b.log||[]).length?`<div class="muted small" style="margin-top:10px">Kirjatut: ${(b.log||[]).slice(-6).map(x=>clock(x.ts)+' '+esc(x.type)+(x.qty>1?' ×'+x.qty:'')).join(' · ')}</div>`:''}</div>
     <div class="row" style="margin-top:12px"><button class="btn grow" data-act="swap-open">🔄 Pyydä vaihtoa</button><button class="btn grow" data-act="m-report-open">📝 Päivän loppuraportti</button></div>
     ${p&&p.stands.find(x=>x.id===b.stand)?`<div class="card" style="margin-top:12px"><h3>Ständiohje</h3><div class="small muted">${esc(p.stands.find(x=>x.id===b.stand).notes||'Ei erityisohjeita.')} · Sähkö: ${p.stands.find(x=>x.id===b.stand).power?'kyllä':'ei'} · Varasto: ${p.stands.find(x=>x.id===b.stand).storage?'kyllä':'ei'}</div></div>`:''}`:''}
-    <div class="card" style="margin-top:12px"><h3>Tulevat vuorot</h3>${upcoming.map(x=>`<div class="li" style="cursor:default"><div class="grow"><b>${fdl(x.date)} · ${tf(x.start)}–${tf(x.end)}</b><span>${esc(place(x.placeId).name)}, ${esc(place(x.placeId).city)}</span></div>${chip(x.status==='tentative'?'tentative':'confirmed')}</div>`).join('')||'<d
+    <div class="card" style="margin-top:12px"><h3>Tulevat vuorot</h3>${upcoming.map(x=>'<div class="li" style="cursor:default"><div class="grow"><b>'+fdl(x.date)+' · '+tf(x.start)+'–'+tf(x.end)+'</b><span>'+esc(place(x.placeId).name)+', '+esc(place(x.placeId).city)+'</span></div>'+chip(x.status==='tentative'?'tentative':'confirmed')+'</div>').join('')||'<div class="muted">Ei tulevia vuoroja.</div>'}</div>
+    <div class="card" style="margin-top:12px"><h3>📢 Ilmoitustaulu</h3>${S.bulletin.slice(0,2).map(postHTML).join('')}</div>
+  </div>`;
+};
+CHANGE.mSeller=function(v){UI.mSeller=v;render()};
+const syncHook=function(){};
+const connected=function(){return false};
+const aiTasks=function(){return []};
+function safeTab(tab){return visibleTabs().includes(tab)?tab:(visibleTabs()[0]||"dashboard")}
+function topbarHTML(){return '<div class="topbar"><button class="logo" data-act="goto" data-tab="dashboard">AP</button><button class="ai-btn" data-act="ai-demo">🤖 <span class="lg">Avainpelaaja AI · </span>'+(MODE==="demo"?"Demo":"Työ")+'</button><span class="sp"></span><button class="icon-btn" data-act="open-needs">🔔</button><button class="avatar" data-act="role-open">'+esc(ini(S.user||"AP"))+'</button></div>'+
+'<div class="modebar"><div class="modeseg"><button class="'+(MODE==="demo"?"on demo":"")+'" data-act="mode" data-mode="demo">Demo</button><button class="'+(MODE==="work"?"on work":"")+'" data-act="mode" data-mode="work">Työ</button></div><div class="modeinfo">'+(MODE==="demo"?"Demo käyttää esimerkkidataa.":"Työtila on tyhjä ja tarkoitettu oikeaan käyttöön.")+"</div></div>"}
+function tabsHTML(){var a=TABS.filter(function(t){return visibleTabs().includes(t.id)});return '<nav class="tabs">'+a.map(function(t){return '<button class="tab '+(UI.tab===t.id?"active":"")+'" data-act="tab" data-tab="'+t.id+'">'+t.ico+" "+esc(t.t)+"</button>"}).join("")+"</nav>"}
+function pageHTML(){var v=VIEWS[UI.tab];if(typeof v!=="function")return '<div class="card"><h3>Näkymä valmistelussa</h3><div class="muted">Tämä osio rakennetaan seuraavassa vaiheessa.</div></div>';try{return v()}catch(e){console.error(e);return '<div class="card"><h3>Näkymän lataus epäonnistui</h3><div class="muted">'+esc(e.message||String(e))+'</div></div>'}}
+function render(){UI.tab=safeTab(UI.tab);var app=$("#app");if(!app)return;stopTimers();app.innerHTML=topbarHTML()+tabsHTML()+'<main class="view">'+pageHTML()+'</main><div class="foot">Avainpelaaja OS · '+(MODE==="demo"?"Demo":"Työ")+'</div>';if(typeof MOUNT[UI.tab]==="function")MOUNT[UI.tab]()}
+ACT["tab"]=function(el){UI.tab=safeTab(el.dataset.tab);render()};
+ACT["goto"]=function(el){UI.tab=safeTab(el.dataset.tab||"dashboard");render()};
+ACT["mode"]=function(el){setMode(el.dataset.mode);render();toast(MODE==="demo"?"Demo-tila käytössä":"Työ-tila käytössä")};
+ACT["close"]=function(){closeModal()};
+ACT["role-open"]=function(){openModal({title:"Käyttäjä ja rooli",body:'<div class="stack"><b>'+esc(S.user||"Käyttäjä")+'</b><div class="muted">Rooli: '+esc(S.role||"Admin")+'</div></div>',foot:'<button class="btn primary" data-act="close">Sulje</button>'})};
+ACT["ai-demo"]=function(){openModal({title:"🤖 Avainpelaaja AI",body:'<div class="ai-msg">AI-liitäntä on valmisteltu. Varsinainen AI-agentti kytketään seuraavassa vaiheessa.</div>',foot:'<button class="btn primary" data-act="close">Selvä</button>'})};
+document.addEventListener("click",function(e){var el=e.target.closest("[data-act]");if(!el)return;var fn=ACT[el.dataset.act];if(typeof fn!=="function")return;try{fn(el,e)}catch(err){console.error(err);toast("Toiminto epäonnistui: "+(err.message||"tuntematon virhe"))}});
+document.addEventListener("change",function(e){var n=e.target.dataset.change;if(n&&typeof CHANGE[n]==="function")CHANGE[n](e.target.value)});
+document.addEventListener("input",function(e){var n=e.target.dataset.live;if(n&&typeof LIVE[n]==="function")LIVE[n](e.target.value)});
+window.addEventListener("beforeunload",function(){stopTimers()});
+if(!UI.tab)UI.tab="dashboard";
+render();
+})();
