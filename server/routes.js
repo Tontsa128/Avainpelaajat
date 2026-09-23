@@ -8,6 +8,7 @@ import { registerSync } from './sync.js';
 import { POI_KINDS, queryBbox, queryNear, poiStats } from './osm.js';
 import { RateLimiter } from './auth.js';
 import { planForSeller } from './ai-planner.js';
+import { audit } from './audit.js';
 
 export const ROLES = ['Admin', 'Buukkaaja', 'Esihenkilö', 'Myyjä', 'Raportointikäyttäjä'];
 const WRITERS = ['Admin', 'Buukkaaja', 'Esihenkilö', 'Myyjä'];
@@ -60,12 +61,7 @@ const VALID = {
 
 const forbidden = () => new HttpError(403, 'forbidden', 'Roolillasi ei ole oikeutta tähän toimintoon.');
 const jparse = (s, d) => { try { return JSON.parse(s); } catch { return d; } };
-
-export function audit(db, orgId, userId, action, detail) {
-  db.prepare('INSERT INTO audit_log(org_id,user_id,ts,action,detail) VALUES(?,?,?,?,?)')
-    .run(orgId, userId || null, Date.now(), action, typeof detail === 'string' ? detail : JSON.stringify(detail || {}));
-}
-
+\n
 /** Tietojen minimointi: Myyjä näkee omat tietonsa kokonaan, muiden vain tarpeellisen. */
 const stripHome = (s) => { const { home, radiusKm, ...rest } = s; void home; void radiusKm; return rest; };
 function redact(kind, items, ctx) {
