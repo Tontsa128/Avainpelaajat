@@ -1,0 +1,8 @@
+[
+ {"id":"poi-helsinki-1","name":"Mall of Tripla","city":"Helsinki","kind":"shopping_centre","lat":60.2055,"lon":24.9992},
+ {"id":"poi-espoo-1","name":"Sello","city":"Espoo","kind":"shopping_centre","lat":60.2187,"lon":24.8139},
+ {"id":"poi-vantaa-1","name":"Jumbo","city":"Vantaa","kind":"shopping_centre","lat":60.2933,"lon":24.9652},
+ {"id":"poi-turku-1","name":"Hansa","city":"Turku","kind":"shopping_centre","lat":60.4518,"lon":22.2666},
+ {"id":"poi-tampere-1","name":"Ratina","city":"Tampere","kind":"shopping_centre","lat":61.4946,"lon":23.7681},
+ {"id":"poi-oulu-1","name":"Valkea","city":"Oulu","kind":"shopping_centre","lat":65.0122,"lon":25.4699}
+]
