@@ -262,11 +262,20 @@ textarea.mono{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12px;m
 @media(max-width:400px){.ai-btn .lg{display:none}}
 .ai-btn{font-size:13.5px;padding:0 4px;gap:4px;letter-spacing:-.2px}
 
+/* Peru viimeisin -ilmoitus */
+.toast{display:flex;align-items:center;gap:12px}
+.undo-btn{background:#0b1224;color:#8db4ff;border:1px solid #2c3f69;border-radius:8px;padding:6px 12px;font-weight:700;cursor:pointer;flex:none}
+.undo-btn:hover{background:#141f3c}
+
 </style>
 </head>
 <body>
 <div id="app" class="app"></div>
 <noscript>Avainpelaaja OS vaatii JavaScriptin.</noscript>
+<!-- Valinnaiset kirjastot: PDF-vienti (raportit) ja Excel-tuonti (myyjät/CRM). Ladataan verkosta;
+     jos yhteyttä ei ole, ominaisuudet ilmoittavat siitä ja ohjaavat käyttämään CSV:tä. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.2/jspdf.umd.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" defer></script>
 <script>
 (function(){
 'use strict';
@@ -370,7 +379,7 @@ const ROLES={
 };
 
 let toastTimer=null;
-function toast(msg){
+function toastPlain(msg){
   const old=$('.toast');if(old)old.remove();
   const el=document.createElement('div');el.className='toast';el.textContent=msg;document.body.appendChild(el);
   clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.remove(),2600);
@@ -385,9 +394,55 @@ function downloadCSV(name,rows){
     toast('CSV ladattu (avautuu Excelissä)');
   }catch(e){copyText(txt);toast('Lataus ei onnistunut – kopioitu leikepöydälle')}
 }
+function toast(msg){toastPlain(msg)}
 function copyText(txt){
   try{if(navigator.clipboard&&navigator.clipboard.writeText){return navigator.clipboard.writeText(txt)}}catch(e){}
   const ta=document.createElement('textarea');ta.value=txt;document.body.appendChild(ta);ta.select();try{document.execCommand('copy')}catch(e){}ta.remove();
+}
+
+
+/* ===================== Yhteiset osaamis- ja validointiapurit ===================== */
+const SKILLS=['Liittymämyynti','Lisämyynti','Tuotemyynti','Kokenut ständimyyjä','Asiakaspalvelu'];
+const EMAIL_RE=/^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const validEmail=v=>!v||EMAIL_RE.test(v.trim());
+const validPhone=v=>!v||(v.replace(/[^0-9]/g,'').length>=6);
+
+/* Yksinkertainen CSV-jäsennin: tukee lainausmerkkejä, pilkkuja ja puolipisteitä erottimena */
+function parseCSV(text){
+  const rows=[];let row=[],cell='',q=false,i=0,sep=null;
+  if(!sep){const head=text.split(/\r?\n/,1)[0]||'';sep=(head.split(';').length>head.split(',').length)?';':','}
+  while(i<text.length){
+    const c=text[i];
+    if(q){
+      if(c==='"'){if(text[i+1]==='"'){cell+='"';i+=2;continue}q=false;i++;continue}
+      cell+=c;i++;continue;
+    }
+    if(c==='"'){q=true;i++;continue}
+    if(c===sep){row.push(cell);cell='';i++;continue}
+    if(c==='\n'||c==='\r'){
+      if(c==='\r'&&text[i+1]==='\n')i++;
+      row.push(cell);cell='';rows.push(row);row=[];i++;continue;
+    }
+    cell+=c;i++;
+  }
+  if(cell.length||row.length){row.push(cell);rows.push(row)}
+  return rows.filter(r=>r.some(c=>c.trim()!==''));
+}
+
+/* vCard (.vcf) -jäsennin: poimii FN/N, TEL, EMAIL, ADR/kaupunki jokaisesta BEGIN:VCARD…END:VCARD-lohkosta */
+function parseVCard(text){
+  const cards=text.split(/BEGIN:VCARD/i).slice(1);
+  return cards.map(block=>{
+    const lines=block.split(/\r?\n/).map(l=>l.replace(/^\s+/,''));
+    const get=key=>{const l=lines.find(x=>new RegExp('^'+key+'([;:]|$)','i').test(x));if(!l)return'';const v=l.split(':').slice(1).join(':');return v.trim()};
+    let name=get('FN');
+    if(!name){const n=get('N');if(n)name=n.split(';').filter(Boolean).reverse().join(' ')}
+    const tel=lines.filter(l=>/^TEL/i.test(l)).map(l=>l.split(':').slice(1).join(':').trim())[0]||'';
+    const email=lines.filter(l=>/^EMAIL/i.test(l)).map(l=>l.split(':').slice(1).join(':').trim())[0]||'';
+    const adr=get('ADR');let city='';
+    if(adr){const parts=adr.split(';');city=(parts[3]||'').trim()}
+    return{name,phone:tel,email,city};
+  }).filter(c=>c.name);
 }
 /* ===================== DEMODATA ===================== */
 function seedData(){
@@ -417,7 +472,7 @@ function seedData(){
       address:'Esimerkkikatu '+(10+i*3)+', '+p[1],web:'',lat:c[0]+off*0.6,lon:c[1]+off,
       visitors:{week:p[2],source:'Kauppiaan arvio',updated:addISO(today,-Math.floor(rnd(5,40)))},
       prices:{day:p[3],weekend:Math.round(p[3]*1.25/10)*10,week:Math.round(p[3]*4.6/10)*10,month:Math.round(p[3]*15/10)*10,campaign:Math.round(p[3]*.9/10)*10,vatIncl:i%3!==0,extra:'Sähkö 15 €/pv'},
-      stands:['A','B','C'].slice(0,p[5]).map((id,k)=>({id,loc:STANDLOC[k],size:k===0?'3 x 2 m':'2 x 2 m',power:true,tables:k===0?2:1,chairs:2,storage:k===0,indoor:true,notes:k===0?'Näkyvin paikka, sähkö seinässä':'Huolehdi kulkuväli vapaaksi'})),
+      stands:['A','B','C'].slice(0,p[5]).map((id,k)=>({id,loc:STANDLOC[k],capacity:4,size:k===0?'3 x 2 m':'2 x 2 m',power:true,tables:k===0?2:1,chairs:2,storage:k===0,indoor:true,notes:k===0?'Näkyvin paikka, sähkö seinässä':'Huolehdi kulkuväli vapaaksi'})),
       contacts:[
         {name:CN[i%CN.length],role:'Kauppakeskusjohtaja',phone:'040 '+(100+i*7)+' '+(2000+i*131),email:ascii(CN[i%CN.length])+'@example.fi',primary:true},
         {name:CN[(i+5)%CN.length],role:i%2?'Markkinointi':'Vuokraus',phone:'050 '+(300+i*5)+' '+(4000+i*97),email:ascii(CN[(i+5)%CN.length])+'@example.fi',primary:false}
@@ -440,6 +495,11 @@ function seedData(){
       restrictions:'',start:addISO(today,-Math.floor(rnd(30,700))),team:'Tiimi '+'ABCD'[i%4],supervisor:i%2?'Toni Jukka':'Sari Lindqvist',
       sf:0.6+R()*0.9,absences:[]};
   });
+  sellers.forEach((s,i)=>{
+    const city=Object.keys(CITY).find(c=>CITY[c][2]===s.region)||'Helsinki',c=CITY[city];
+    s.home={address:'Esimerkkikatu '+(3+i),city,lat:Math.round((c[0]+(R()-.5)*.08)*1e5)/1e5,lon:Math.round((c[1]+(R()-.5)*.12)*1e5)/1e5,source:'city'};
+    s.radiusKm=[100,100,100,60,150][i%5];
+  });
   sellers[5].absences.push({from:addISO(today,9),to:addISO(today,13),type:'Loma'});
   sellers[11].absences.push({from:addISO(today,2),to:addISO(today,3),type:'Poissaolo'});
   const absent=(s,d)=>s.absences.some(a=>d>=a.from&&d<=a.to);
@@ -458,7 +518,7 @@ function seedData(){
     const ss=shuffle(avail).slice(0,Math.min(N,avail.length));
     const sl=shuffle(slots);
     ss.forEach((s,i)=>{
-      const sp=sl[i];const pl=places.find(x=>x.id===sp.p);
+      const sp=sl[Math.floor(i*0.6)];const pl=places.find(x=>x.id===sp.p); // osalla ständeistä on 2 myyjää
       const tm=R()<.6?TIMES[0]:pick(TIMES);
       const b={id:'b'+(bn++),date:d,start:tm[0],end:tm[1],sellerId:s.id,placeId:pl.id,stand:sp.st,status:'confirmed',
         campaign:(off>=-14&&R()<.4)?'c1':'',note:'',owner:'Toni Jukka',deals:0,log:[],report:null};
@@ -558,8 +618,9 @@ function load(){
   try{const r=localStorage.getItem(KEY_BASE+MODE);if(r){const o=JSON.parse(r);if(o&&o.v===1&&(MODE==='work'||o.dirty||o.seedDate===T()))return o}}catch(e){}
   return MODE==='work'?emptyData():seedData();
 }
-function save(){try{localStorage.setItem(KEY_BASE+MODE,JSON.stringify(S))}catch(e){}}
-function setMode(m){MODE=m;try{localStorage.setItem(MODE_KEY,m)}catch(e){}S=load();Object.assign(UI,UI0());save()}
+function persist(){try{localStorage.setItem(KEY_BASE+MODE,JSON.stringify(S))}catch(e){}}
+function save(){persist();syncHook()}
+function setMode(m){MODE=m;try{localStorage.setItem(MODE_KEY,m)}catch(e){}S=load();Object.assign(UI,UI0());persist()}
 
 const UI0=()=>({
   tab:'dashboard',calView:'week',calDate:T(),calRegion:'',calTeam:'',editBooking:null,pendingMove:null,
@@ -570,7 +631,8 @@ const UI0=()=>({
   mapStatus:'',mapRegion:'',mapLeads:true,mapZoom:'south',mapSel:null,
   repTab:'myyja',repPeriod:'30',
   moreTab:'kampanjat',logQ:'',
-  aiChat:[]
+  aiChat:[],
+  mapKinds:[],mapScale:1,mapCx:163,mapCy:440,mapPois:[],mapPoiKey:'',rangeKinds:['mall','exhibition','department_store'],plan:null
 });
 const UI=UI0();
 
@@ -579,7 +641,7 @@ const place=id=>S.places.find(p=>p.id===id);
 const lead=id=>S.leads.find(l=>l.id===id);
 const camp=id=>S.campaigns.find(c=>c.id===id);
 const booking=id=>S.bookings.find(b=>b.id===id);
-const me=()=>seller(S.role==='Myyjä'?S.meId:(UI.mSeller||S.meId))||S.sellers[0]||null;
+const me=()=>S.role==='Myyjä'?(seller(S.meId)||null):(seller(UI.mSeller||S.meId)||S.sellers[0]||null);
 const userName=()=>S.role==='Myyjä'&&seller(S.meId)?seller(S.meId).name:(S.user||'Käyttäjä');
 const dur=b=>(tmin(b.end)-tmin(b.start))/60;
 const bookingsOn=d=>S.bookings.filter(b=>b.date===d);
@@ -600,6 +662,18 @@ const onBreak=e=>e&&!e.endTs&&(e.breaks||[]).some(x=>!x.e);
 /* Poissaolot */
 const absenceOn=(s,d)=>s.absences.find(a=>d>=a.from&&d<=a.to);
 
+/* Ständipaikan kapasiteetti: 1–4 myyjää samaan aikaan */
+const STAND_CAP=4;
+function standCap(p,standId){const s=p&&p.stands.find(x=>x.id===standId);const c=s?Math.round(Number(s.capacity)):NaN;return c>=1&&c<=4?c:STAND_CAP}
+const capTotal=p=>p.stands.reduce((a,s)=>a+standCap(p,s.id),0);
+/** Suurin samanaikainen määrä aikavälejä; peräkkäiset välit eivät ole päällekkäisiä. */
+function peakLoad(list){
+  const ev=[];list.forEach(x=>{ev.push([x[0],1]);ev.push([x[1],-1])});
+  ev.sort((a,b)=>a[0]-b[0]||a[1]-b[1]);
+  let cur=0,max=0;ev.forEach(e=>{cur+=e[1];if(cur>max)max=cur});return max;
+}
+const standCount=(placeId,stand,date)=>S.bookings.filter(b=>b.date===date&&b.placeId===placeId&&b.stand===stand).length;
+
 /* Konfliktit */
 function conflicts(nb,ignoreId){
   const out=[];const st=S.settings;
@@ -618,15 +692,33 @@ function conflicts(nb,ignoreId){
         if(gap<need)out.push({level:'warn',code:'travel',msg:`Tarkista siirtymäaika: ${bp.name} → ${p.name} on noin ${Math.round(km)} km (arvio ${need} min), väliä on ${gap} min.`});
       }
     }
-    if(b.placeId===nb.placeId&&b.stand===nb.stand&&ov)out.push({level:'error',code:'stand',msg:`Ständipaikka ${p.name} / ${nb.stand} on jo varattu (${seller(b.sellerId).name} ${tf(b.start)}–${tf(b.end)}).`});
   });
+  const sameStand=S.bookings.filter(b=>b.date===nb.date&&b.id!==ignoreId&&b.placeId===nb.placeId&&b.stand===nb.stand&&tmin(nb.start)<tmin(b.end)&&tmin(b.start)<tmin(nb.end));
+  if(sameStand.length){
+    const cap=standCap(p,nb.stand);
+    if(peakLoad([[tmin(nb.start),tmin(nb.end)]].concat(sameStand.map(b=>[tmin(b.start),tmin(b.end)])))>cap){
+      out.push({level:'error',code:'stand',msg:`Ständipaikka ${p.name} / ${nb.stand} on täynnä: enintään ${cap} myyjää samaan aikaan (${sameStand.map(b=>seller(b.sellerId).name.split(' ')[0]).join(', ')}).`});
+    }
+  }
   const h=(tmin(nb.end)-tmin(nb.start))/60;
   if(h>st.maxShiftH)out.push({level:'warn',code:'long',msg:`Liian pitkä työvuoro: ${d1(h)} h (raja ${st.maxShiftH} h).`});
   if(nb.status==='tentative')out.push({level:'warn',code:'unconfirmed',msg:'Varaus on vahvistamatta.'});
   if(p.contract&&(nb.date<p.contract.start||nb.date>p.contract.end))out.push({level:'warn',code:'contract',msg:`Päivä on sopimuksen ulkopuolella (${fd(p.contract.start)}–${fd(p.contract.end)}).`});
   const ab=absenceOn(s,nb.date);
   if(ab)out.push({level:'warn',code:'absence',msg:`Myyjällä on merkitty poissaolo (${ab.type}) tälle päivälle.`});
+  if(p.requiredSkill&&!(s.skills||[]).includes(p.requiredSkill))out.push({level:'warn',code:'skill',msg:`${s.name} ei ole merkitty osaavaksi: "${p.requiredSkill}". Tarkista sopiiko myyjä tälle ständille.`});
   return out;
+}
+
+/* ===================== Peru viimeisin (Undo) ===================== */
+let undoTimer=null;
+function actionToast(msg,actLabel,fn){
+  const old=$('.toast');if(old)old.remove();clearTimeout(undoTimer);
+  const el=document.createElement('div');el.className='toast';
+  el.innerHTML=`<span>${esc(msg)}</span> <button class="undo-btn" type="button">${esc(actLabel)}</button>`;
+  el.querySelector('.undo-btn').addEventListener('click',()=>{el.remove();clearTimeout(undoTimer);try{fn()}catch(e){console.error(e)}});
+  document.body.appendChild(el);
+  undoTimer=setTimeout(()=>el.remove(),8000);
 }
 function confHTML(list){
   if(!list.length)return '<div class="conf ok">✓ Ei konflikteja tai varoituksia</div>';
@@ -643,7 +735,7 @@ function bstat(b){
 function inPeriod(from,to){const cap=Y();return b=>b.date>=from&&b.date<=to&&b.date<=cap}
 function agg(list){let sh=0,h=0,d=0;list.forEach(b=>{sh++;h+=dur(b);d+=b.deals||0});return{sh,h,d,ph:h?d/h:0,pd:sh?d/sh:0}}
 function sellerStats(id,from,to){return agg(S.bookings.filter(b=>b.sellerId===id&&inPeriod(from,to)(b)))}
-function placeStats(id,from,to){from=from||'2000-01-01';to=to||Y();const l=S.bookings.filter(b=>b.placeId===id&&inPeriod(from,to)(b));const a=agg(l);a.best=l.reduce((m,b)=>Math.max(m,b.deals||0),0);a.list=l;return a}
+function placeStats(id,from,to){from=from||'2000-01-01';to=to||Y();const l=S.bookings.filter(b=>b.placeId===id&&inPeriod(from,to)(b));const a=agg(l);a.best=l.reduce((m,b)=>Math.max(m,b.deals||0),0);a.list=l;a.standDays=new Set(l.map(b=>b.date+'|'+b.stand)).size;return a}
 function trendOf(id){
   const y=Y();const a=sellerStats(id,addISO(y,-6),y),b=sellerStats(id,addISO(y,-13),addISO(y,-7));
   if(!a.h||!b.h)return'flat';const r=a.ph/(b.ph||1);return r>1.05?'up':r<.95?'down':'flat';
@@ -668,8 +760,8 @@ function availabilityInfo(p,from,days){
   for(let i=0;i<days;i++){
     const d=addISO(from,i);
     const used=S.bookings.filter(b=>b.date===d&&b.placeId===p.id).length;
-    const f=p.stands.length-used;
-    total+=p.stands.length;free+=Math.max(0,f);
+    const f=capTotal(p)-used;
+    total+=capTotal(p);free+=Math.max(0,f);
     if(!next&&f>0&&d>=p.contract.start&&d<=p.contract.end)next=d;
   }
   return{ratio:total?free/total:0,nextFree:next};
@@ -677,7 +769,7 @@ function availabilityInfo(p,from,days){
 function placeStatus(p,d){
   if(p.neg)return'neg';
   const used=S.bookings.filter(b=>b.date===d&&b.placeId===p.id).length;
-  return used>=p.stands.length?'booked':'free';
+  return used>=capTotal(p)?'booked':'free';
 }
 const PST={free:{c:'green',sym:'✓',t:'Saatavilla',col:'#22c55e'},booked:{c:'blue',sym:'●',t:'Varattu',col:'#3b82f6'},neg:{c:'yellow',sym:'◐',t:'Neuvottelu',col:'#eab308'}};
 function placeScore(p){
@@ -690,7 +782,7 @@ function placeScore(p){
 }
 function costPerDeal(p,st){
   if(!st.d)return null;
-  return (p.prices.day*st.sh+st.h*S.settings.labourCostH)/st.d;
+  return (p.prices.day*st.standDays+st.h*S.settings.labourCostH)/st.d; // ständin hinta maksetaan kerran ständipäivältä, ei jokaiselta myyjältä
 }
 function sellerToday(s){
   const t=T();
@@ -753,7 +845,7 @@ function openModal(o){
   document.body.appendChild(root);document.body.style.overflow='hidden';
   if(o.onMount)o.onMount();
 }
-function closeModal(){removeModal();UI.editBooking=null}
+function closeModal(){removeModal();UI.editBooking=null;if(SRV.needRender){SRV.needRender=false;setTimeout(render,0)}}
 const fld=(label,inner,cls)=>`<label class="fld ${cls||''}"><span>${label}</span>${inner}</label>`;
 const inp=(id,v,type,extra)=>`<input id="${id}" type="${type||'text'}" value="${esc(v==null?'':v)}" ${extra||''}>`;
 const sel=(id,opts,cur,extra)=>`<select id="${id}" ${extra||''}>${opts.map(o=>{const v=Array.isArray(o)?o[0]:o,l=Array.isArray(o)?o[1]:o;return `<option value="${esc(v)}" ${String(v)===String(cur)?'selected':''}>${esc(l)}</option>`}).join('')}</select>`;
@@ -898,6 +990,7 @@ VIEWS.kalenteri=function(){
     <div class="seg">${[['day','Päivä'],['week','Viikko'],['seller','Myyjä'],['month','Kuukausi']].map(a=>`<button class="${v===a[0]?'on':''}" data-act="cal-view" data-v="${a[0]}">${a[1]}</button>`).join('')}</div>
     <div class="row grow" style="justify-content:center;min-width:240px"><button class="btn sm" data-act="cal-nav" data-n="-1">‹</button><div class="cal-title">${title}</div><button class="btn sm" data-act="cal-nav" data-n="1">›</button></div>
     <button class="btn sm" data-act="cal-today">Tänään</button>
+    <button class="btn" data-act="planner-open">🗓 Viikkosuunnittelija</button>
     <button class="btn primary" data-act="new-booking">+ Uusi varaus</button>
   </div>
   <div class="filters">
@@ -936,8 +1029,9 @@ function dayView(){
   let h=`<div class="card"><div class="row between"><b>${total} työvuoroa · ${nf(bookingsOn(d).reduce((a,b)=>a+dur(b),0))} h</b>${needs.map(n=>chipC('red','! Tarve: '+esc(n.city)+' '+n.count+' paikkaa')).join('')}</div></div>`;
   h+=pls.map(p=>{
     const l=S.bookings.filter(b=>b.date===d&&b.placeId===p.id).sort((a,b)=>a.stand.localeCompare(b.stand));
-    const free=p.stands.length-l.length;
-    return `<div class="dayplace" data-drop="cell" data-place="${p.id}" data-date="${d}"><div class="row between"><div><b>${esc(p.name)}</b> <span class="muted small">${esc(p.city)}</span></div>${free>0?chipC('green','✓ '+free+' vapaata ständiä'):chipC('blue','● Täynnä')}</div>
+    const free=capTotal(p)-l.length;
+    const occ=p.stands.map(s=>{const n=l.filter(b=>b.stand===s.id).length,c=standCap(p,s.id);return chipC(n>=c?'blue':n?'yellow':'gray',s.id+': '+n+'/'+c,'sm')}).join(' ');
+    return `<div class="dayplace" data-drop="cell" data-place="${p.id}" data-date="${d}"><div class="row between"><div><b>${esc(p.name)}</b> <span class="muted small">${esc(p.city)}</span></div>${free>0?chipC('green','✓ '+free+' vapaata paikkaa'):chipC('blue','● Täynnä')}</div><div class="row" style="margin-top:6px;gap:6px">${occ}</div>
     ${l.length?`<div class="stack" style="margin-top:8px">${l.map(b=>{const k=bstat(b);return `<div class="bk ${ST[k].c}" draggable="true" data-drag="b:${b.id}" data-act="edit-booking" data-id="${b.id}" style="font-size:14px;padding:9px 11px"><span>${ST[k].sym}</span><b>${esc(seller(b.sellerId).name)}</b><em>${tf(b.start)}–${tf(b.end)}</em><span class="muted">Ständi ${b.stand}${b.deals?' · '+b.deals+' kauppaa':''}</span><i>${ST[k].t}</i></div>`}).join('')}</div>`:'<div class="muted small" style="margin-top:6px">Ei varauksia.</div>'}
     ${free>0?`<button class="btn sm" style="margin-top:8px" data-act="new-booking" data-place="${p.id}" data-date="${d}">+ Lisää varaus</button>`:''}</div>`;
   }).join('');
@@ -983,7 +1077,7 @@ function openBooking(id,pre){
     body:`<div class="fgrid">
       ${fld('Myyjä',sel('b_seller',S.sellers.map(s=>[s.id,s.name]),d.sellerId,'class="bf"'))}
       ${fld('Kauppapaikka',sel('b_place',S.places.map(x=>[x.id,x.name+' ('+x.city+')']),d.placeId,'class="bf"'))}
-      ${fld('Ständipaikka',sel('b_stand',p.stands.map(s=>[s.id,'Ständi '+s.id+' – '+s.loc]),d.stand,'class="bf"'))}
+      ${fld('Ständipaikka',sel('b_stand',p.stands.map(s=>[s.id,standLabel(p,s,d.date,b?b.id:'')]),d.stand,'class="bf"'))}
       ${fld('Päivämäärä',inp('b_date',d.date,'date','class="bf"'))}
       ${fld('Alkaa',inp('b_start',d.start,'time','class="bf"'))}
       ${fld('Loppuu',inp('b_end',d.end,'time','class="bf"'))}
@@ -996,10 +1090,20 @@ function openBooking(id,pre){
     foot:`${b?`<button class="btn danger" data-act="del-booking" data-id="${b.id}">Poista</button>`:''}<button class="btn" data-act="close">Peruuta</button><button class="btn primary" data-act="save-booking">Tallenna varaus</button>`,
     onMount:()=>refreshConf()});
 }
+function standLabel(p,s,date,ignoreId){
+  const n=S.bookings.filter(b=>b.date===date&&b.placeId===p.id&&b.stand===s.id&&b.id!==ignoreId).length;
+  return `Ständi ${s.id} – ${s.loc} (${n}/${standCap(p,s.id)} myyjää)`;
+}
 function bookingFromForm(){return{date:val('b_date'),start:val('b_start'),end:val('b_end'),sellerId:val('b_seller'),placeId:val('b_place'),stand:val('b_stand'),status:val('b_status'),campaign:val('b_camp'),note:val('b_note'),owner:val('b_owner')}}
 function refreshConf(){
   const p=place(val('b_place'));const st=$('#b_stand');
-  if(p&&st){const cur=st.value;const want=p.stands.map(s=>s.id);if(st.options.length!==want.length||Array.from(st.options).some((o,i)=>o.value!==want[i])){st.innerHTML=p.stands.map(s=>`<option value="${s.id}">Ständi ${s.id} – ${esc(s.loc)}</option>`).join('');st.value=want.includes(cur)?cur:want[0]}}
+  if(p&&st){
+    const cur=st.value,want=p.stands.map(s=>s.id),date=val('b_date');
+    const labels=p.stands.map(s=>standLabel(p,s,date,UI.editBooking||''));
+    if(st.options.length!==want.length||Array.from(st.options).some((o,i)=>o.value!==want[i]||o.textContent!==labels[i])){
+      st.innerHTML=p.stands.map((s,i)=>`<option value="${s.id}">${esc(labels[i])}</option>`).join('');st.value=want.includes(cur)?cur:want[0];
+    }
+  }
   const box=$('#b_conf');if(box)box.innerHTML=confHTML(conflicts(bookingFromForm(),UI.editBooking||null));
 }
 ACT['save-booking']=()=>{
@@ -1014,7 +1118,9 @@ ACT['save-booking']=()=>{
 ACT['del-booking']=el=>{
   if(!guard())return;
   if(!el.dataset.armed){el.dataset.armed='1';el.textContent='Vahvista poisto';return}
-  const b=booking(el.dataset.id);audit('Varaus poistettu',bsum(b),'');S.bookings=S.bookings.filter(x=>x!==b);save();closeModal();render();toast('Varaus poistettu');
+  const b=booking(el.dataset.id),snap=Object.assign({},b),sum=bsum(b);
+  audit('Varaus poistettu',sum,'');S.bookings=S.bookings.filter(x=>x!==b);save();closeModal();render();
+  actionToast('Varaus poistettu: '+sum,'Kumoa',()=>{S.bookings.push(snap);audit('Varauksen poisto kumottu','',sum);save();render()});
 };
 
 /* ---------- Siirto vedä & pudota ---------- */
@@ -1028,12 +1134,13 @@ function tryMove(b,patch){
   applyMove(b.id,patch);
 }
 function applyMove(id,patch){
-  const b=booking(id),old=bsum(b);Object.assign(b,patch);
+  const b=booking(id),before=Object.assign({},b),old=bsum(b);Object.assign(b,patch);
   if(patch.stand===undefined&&patch.placeId){const p=place(b.placeId);if(!p.stands.some(s=>s.id===b.stand)){b.stand=p.stands[0].id}}
   /* jos ständi on jo varattu, hae vapaa */
   const p=place(b.placeId);
   if(conflicts(b,b.id).some(x=>x.code==='stand')){const free=p.stands.find(s=>!conflicts(Object.assign({},b,{stand:s.id}),b.id).some(x=>x.code==='stand'));if(free)b.stand=free.id}
-  audit('Varaus siirretty',old,bsum(b));notify('Varaus siirretty: '+bsum(b),'booking');save();render();toast('Varaus siirretty');
+  audit('Varaus siirretty',old,bsum(b));notify('Varaus siirretty: '+bsum(b),'booking');save();render();
+  actionToast('Varaus siirretty: '+bsum(b),'Kumoa',()=>{Object.assign(b,before);audit('Siirto kumottu',bsum(b),old);save();render()});
 }
 ACT['confirm-move']=()=>{const m=UI.pendingMove;if(m){applyMove(m.id,m.patch);UI.pendingMove=null}closeModal()};
 function handleDrop(drag,d){
@@ -1061,13 +1168,13 @@ function handleDrop(drag,d){
 function openNeeds(){
   const needs=S.needs.slice().sort((a,b)=>a.date.localeCompare(b.date));
   openModal({title:'🔴 Buukkaamattomat tarpeet',
-    body:needs.length?`<table class="tbl"><thead><tr><th>Päivä</th><th>Kaupunki</th><th class="num">Paikkoja</th><th></th></tr></thead><tbody>${needs.map(n=>`<tr><td>${fdl(n.date)}</td><td><b>${esc(n.city)}</b></td><td class="num">${n.count}</td><td class="right nowrap"><button class="btn sm" data-act="need-find" data-id="${n.id}">Etsi sopivia kauppapaikkoja</button> <button class="btn sm ghost" data-act="need-done" data-id="${n.id}">Täytetty</button></td></tr>`).join('')}</tbody></table>
+    body:needs.length?`<table class="tbl"><thead><tr><th>Päivä</th><th>Kaupunki</th><th class="num">Paikkoja</th><th></th></tr></thead><tbody>${needs.map(n=>`<tr><td>${fdl(n.date)}</td><td><b>${esc(n.city)}</b></td><td class="num">${n.count}</td><td class="right nowrap"><button class="btn sm" data-act="need-find" data-id="${n.id}">Etsi kohteita</button> ${canSeeHome()?`<button class="btn sm primary" data-act="need-autofill" data-id="${n.id}">🤖 Täytä automaattisesti</button>`:''} <button class="btn sm ghost" data-act="need-done" data-id="${n.id}">Täytetty</button></td></tr>`).join('')}</tbody></table>
     <p class="muted small">Painamalla “Etsi sopivia kauppapaikkoja” siirryt karttaan, jossa näkyvät kaupungin vapaat kohteet ja CRM-kohteet. Tarve pienenee automaattisesti, kun luot varauksen samaan kaupunkiin samalle päivälle.</p>`:'<div class="muted">Kaikki tarpeet on katettu ✓</div>'});
 }
 ACT['open-needs']=openNeeds;
 ACT['need-find']=el=>{
   const n=S.needs.find(x=>x.id===el.dataset.id);if(!n)return;closeModal();
-  UI.tab='kartta';UI.mapRegion=CITY[n.city][2];UI.mapStatus='free';UI.mapLeads=true;UI.mapSel=null;UI.mapZoom='south';
+  UI.tab='kartta';UI.mapRegion=CITY[n.city][2];UI.mapStatus='free';UI.mapLeads=true;UI.mapSel=null;UI.mapZoom='south';UI.mapScale=1;
   UI.calDate=n.date;render();toast('Vapaat kohteet: '+n.city+' '+fd(n.date));
 };
 ACT['need-done']=el=>{if(!guard())return;const n=S.needs.find(x=>x.id===el.dataset.id);S.needs=S.needs.filter(x=>x!==n);audit('Tarve merkitty täytetyksi','',n.city+' '+fd(n.date));save();openNeeds();render()};
@@ -1109,7 +1216,7 @@ VIEWS.crm=function(){
   const cl=callList().length;
   return `<div class="cal-head">
     <div class="seg"><button class="${UI.crmView==='kanban'?'on':''}" data-act="crm-view" data-v="kanban">Kanban</button><button class="${UI.crmView==='calls'?'on':''}" data-act="crm-view" data-v="calls">Soittolista (${cl})</button></div>
-    <div class="grow"></div><button class="btn primary" data-act="lead-new">+ Uusi kohde</button></div>
+    <div class="grow"></div><button class="btn" data-act="import-open" data-target="leads">⬆ Tuo tiedosto</button><button class="btn primary" data-act="lead-new">+ Uusi kohde</button></div>
   <div class="filters"><div class="search-box"><input data-live="crm" placeholder="Hae kohdetta, kaupunkia, yhteyshenkilöä…" value="${esc(UI.crmQ)}"></div>
   <select data-change="crmRegion"><option value="">Kaikki alueet</option>${regionsList().concat(Object.values(CITY).map(c=>c[2])).filter((v,i,a)=>a.indexOf(v)===i).sort().map(r=>`<option ${UI.crmRegion===r?'selected':''}>${esc(r)}</option>`).join('')}</select></div>
   <div id="crmBody">${UI.crmView==='kanban'?kanbanHTML():callsHTML()}</div>`;
@@ -1149,6 +1256,7 @@ function openLead(id){
 }
 ACT['lead-save']=()=>{
   if(!guard())return;const l=lead(UI.editLead);const old=LEAD_ST[l.status].t;
+  if(!validEmail(val('l_cmail'))){toast('Sähköpostiosoite ei kelpaa');return}if(!validPhone(val('l_cphone'))){toast('Puhelinnumero ei kelpaa');return}
   if(!readLead(l))return;
   if(LEAD_ST[l.status].t!==old)l.history.push({ts:Date.now(),text:'Tila muutettu: '+old+' → '+LEAD_ST[l.status].t});
   audit('CRM-kohde päivitetty',old,LEAD_ST[l.status].t+' ('+l.name+'), seuraava: '+l.next+' '+fd(l.nextDate));save();closeModal();render();toast('Kohde tallennettu');
@@ -1161,6 +1269,7 @@ ACT['lead-new']=()=>{
 ACT['lead-add']=()=>{
   const nl={id:uid('l'),name:val('l_name').trim(),city:val('l_city'),type:'Kauppakeskus',history:[{ts:Date.now(),text:'Lisätty CRM:ään'}]};
   if(!nl.name){toast('Anna kohteelle nimi');return}
+  if(!validEmail(val('l_cmail'))){toast('Sähköpostiosoite ei kelpaa');return}if(!validPhone(val('l_cphone'))){toast('Puhelinnumero ei kelpaa');return}
   if(!readLead(nl))return;
   S.leads.push(nl);audit('CRM-kohde lisätty','',nl.name+' ('+nl.city+')');save();closeModal();render();toast('Kohde lisätty');
 };
@@ -1195,7 +1304,7 @@ ACT['lead-to-place']=()=>{
   const l=lead(UI.editLead),c=CITY[l.city],pr=parseInt((l.price||'').replace(/\D/g,''),10)||280;
   const p={id:uid('p'),name:l.name,type:l.type,city:l.city,region:c[2],address:'',web:'',lat:c[0],lon:c[1],
     visitors:{week:0,source:'Ei vielä arviota',updated:T()},prices:{day:pr,weekend:pr,week:pr*5,month:pr*15,campaign:pr,vatIncl:false,extra:''},
-    stands:[{id:'A',loc:'Sovittava',size:'',power:false,tables:1,chairs:2,storage:false,indoor:true,notes:''}],
+    stands:[{id:'A',loc:'Sovittava',capacity:4,size:'',power:false,tables:1,chairs:2,storage:false,indoor:true,notes:''}],
     contacts:[{name:l.contact.name||'Yhteyshenkilö',role:'Yhteyshenkilö',phone:l.contact.phone,email:l.contact.email,primary:true}],
     contract:{start:T(),end:addISO(T(),180)},docs:[],neg:false,notes:l.notes,q:1};
   S.places.push(p);l.placeId=p.id;l.history.push({ts:Date.now(),text:'Luotu kauppapaikaksi'});
@@ -1209,6 +1318,7 @@ let timerId=null;
 function stopTimers(){if(timerId){clearInterval(timerId);timerId=null}}
 VIEWS.mobiili=function(){
   const s=me();
+  if(!s&&S.role==='Myyjä'&&connected())return '<div class="card phone"><h3>Tiliäsi ei ole linkitetty</h3><div class="muted">Pyydä ylläpitäjää linkittämään käyttäjätilisi myyjäprofiiliisi (☁ → Jäsenet). Sen jälkeen näet vuorosi, ajanottosi ja kauppalaskurisi täällä.</div></div>';
   if(!s)return '<div class="card phone"><h3>Mobiilinäkymä</h3><div class="muted">Lisää ensin myyjä (Myyjät-välilehti), niin näet hänen työvuoronsa, ajanoton ja kauppalaskurin täällä.</div></div>';
   const t=T(),b=todayBooking(s.id),e=entryFor(s.id,t);
   const p=b?place(b.placeId):null;
@@ -1245,94 +1355,4 @@ VIEWS.mobiili=function(){
       ${(b.log||[]).length?`<div class="muted small" style="margin-top:10px">Kirjatut: ${(b.log||[]).slice(-6).map(x=>clock(x.ts)+' '+esc(x.type)+(x.qty>1?' ×'+x.qty:'')).join(' · ')}</div>`:''}</div>
     <div class="row" style="margin-top:12px"><button class="btn grow" data-act="swap-open">🔄 Pyydä vaihtoa</button><button class="btn grow" data-act="m-report-open">📝 Päivän loppuraportti</button></div>
     ${p&&p.stands.find(x=>x.id===b.stand)?`<div class="card" style="margin-top:12px"><h3>Ständiohje</h3><div class="small muted">${esc(p.stands.find(x=>x.id===b.stand).notes||'Ei erityisohjeita.')} · Sähkö: ${p.stands.find(x=>x.id===b.stand).power?'kyllä':'ei'} · Varasto: ${p.stands.find(x=>x.id===b.stand).storage?'kyllä':'ei'}</div></div>`:''}`:''}
-    <div class="card" style="margin-top:12px"><h3>Tulevat vuorot</h3>${upcoming.map(x=>`<div class="li" style="cursor:default"><div class="grow"><b>${fdl(x.date)} · ${tf(x.start)}–${tf(x.end)}</b><span>${esc(place(x.placeId).name)}, ${esc(place(x.placeId).city)}</span></div>${chip(x.status==='tentative'?'tentative':'confirmed')}</div>`).join('')||'<div class="muted">Ei tulevia vuoroja.</div>'}</div>
-    <div class="card" style="margin-top:12px"><h3>📢 Ilmoitustaulu</h3>${S.bulletin.slice(0,2).map(postHTML).join('')}</div>
-  </div>`;
-};
-CHANGE.mSeller=v=>{UI.mSeller=v;render()};
-MOUNT.mobiili=function(){
-  const el=$('#timer');if(!el)return;
-  const e=S.time.find(x=>x.id===el.dataset.eid);if(!e||e.endTs)return;
-  timerId=setInterval(()=>{const t=$('#timer');if(!t){stopTimers();return}t.textContent=fmtHMS(workMs(e))},1000);
-};
-ACT['m-start']=()=>{
-  if(!guard())return;
-  const s=me(),t=T(),b=todayBooking(s.id);if(!b){toast('Ei vuoroa tälle päivälle');return}
-  if(entryFor(s.id,t))return;
-  const e={id:uid('t'),sellerId:s.id,date:t,startTs:Date.now(),endTs:null,breaks:[],note:''};
-  const late=Math.round((e.startTs-dayTs(t,b.start))/60000);
-  if(late>10){e.note='Myöhästyminen '+late+' min';notify('Myöhästyminen: '+s.name+' aloitti vuoron '+late+' min myöhässä','late')}
-  S.time.push(e);audit('Työvuoro aloitettu','',s.name+' '+clock(e.startTs));
-  if(S.settings.gps&&navigator.geolocation){
-    const p=place(b.placeId);
-    navigator.geolocation.getCurrentPosition(pos=>{const km=haversine({lat:pos.coords.latitude,lon:pos.coords.longitude},p);e.gpsNote=km<.5?'Sijainti tarkistettu: ständin lähellä ('+Math.round(km*1000)+' m)':'Sijainti poikkeaa: '+d1(km)+' km kohteesta';save();render()},()=>{e.gpsNote='Sijaintia ei saatu';save();render()},{timeout:7000});
-  }
-  save();render();toast('Työvuoro aloitettu');
-};
-ACT['m-break']=()=>{const e=openEntry(me().id,T());if(!e)return;e.breaks.push({s:Date.now(),e:null});save();render();toast('Tauko alkoi')};
-ACT['m-resume']=()=>{const e=openEntry(me().id,T());if(!e)return;e.breaks.forEach(x=>{if(!x.e)x.e=Date.now()});save();render();toast('Työ jatkuu')};
-ACT['m-end']=()=>{
-  const s=me(),e=openEntry(s.id,T());if(!e)return;
-  e.breaks.forEach(x=>{if(!x.e)x.e=Date.now()});e.endTs=Date.now();
-  const b=todayBooking(s.id);const worked=workMs(e)/3600000;
-  const planned=b?dur(b):0;let note='';
-  if(worked>planned+.25){note='Ylitys '+d1(worked-planned)+' h';notify('Ylitys: '+s.name+' '+d1(worked-planned)+' h','late')}
-  if(note)e.note=(e.note?e.note+'; ':'')+note;
-  audit('Työvuoro päättynyt','',s.name+' '+clock(e.startTs)+'–'+clock(e.endTs)+' ('+d1(worked)+' h)');save();render();
-  toast('Vuoro päättyi · '+d1(worked)+' h');openReport();
-};
-ACT['m-sale-open']=()=>{
-  const b=todayBooking(me().id);if(!b)return;
-  const types=['Liittymä','Tuote','Lisämyynti','Muu'];
-  openModal({title:'＋ Lisää kauppa',
-    body:`<div class="row between" style="margin-bottom:12px"><span class="muted">Tänään yhteensä</span><span class="big-num" id="saleNum">${b.deals||0}</span></div>
-    <div class="grid g2">${types.map(x=>`<button class="btn big" data-act="add-sale" data-type="${x}">${x}<span class="muted" style="font-size:13px">+1</span></button>`).join('')}</div>`,
-    foot:'<button class="btn" data-act="undo-sale">↩ Kumoa viimeisin</button><button class="btn primary" data-act="close">Valmis</button>'});
-};
-ACT['add-sale']=el=>{
-  if(!guard())return;const b=todayBooking(me().id);if(!b)return;
-  b.deals=(b.deals||0)+1;b.log=b.log||[];b.log.push({ts:Date.now(),type:el.dataset.type,qty:1});S.dirty=true;save();
-  const n=$('#saleNum');if(n)n.textContent=b.deals;render();
-};
-ACT['undo-sale']=()=>{
-  const b=todayBooking(me().id);if(!b||!(b.log||[]).length){toast('Ei kumottavaa');return}
-  const x=b.log.pop();b.deals=Math.max(0,(b.deals||0)-x.qty);S.dirty=true;save();const n=$('#saleNum');if(n)n.textContent=b.deals;render();
-};
-function openReport(){
-  const b=todayBooking(me().id);if(!b)return;const r=b.report||{};
-  openModal({title:'📝 Päivän loppuraportti',
-    body:`<div class="muted small" style="margin-bottom:10px">30 sekunnin raportti – tästä kertyy paikan laatuhistoria.</div><div class="stack">
-    <div class="fgrid">${fld('Kaupat',inp('r_deals',b.deals||0,'number','readonly'))}${fld('Asiakasmääräarvio',inp('r_visitors',r.visitors||'','number','placeholder="esim. 400"'))}</div>
-    ${fld('Ongelmat',`<textarea id="r_issues" placeholder="Ei ongelmia / mitä tapahtui?">${esc(r.issues||'')}</textarea>`)}
-    ${fld('Ständipaikan kommentti',`<textarea id="r_comment" placeholder="Näkyvyys, kulkuvirta, sähkö…">${esc(r.comment||'')}</textarea>`)}
-    ${fld('Muu huomio',inp('r_note',r.note||''))}</div>`,
-    foot:'<button class="btn" data-act="close">Myöhemmin</button><button class="btn primary" data-act="save-report">Lähetä raportti</button>'});
-}
-ACT['m-report-open']=openReport;
-ACT['save-report']=()=>{
-  const b=todayBooking(me().id);if(!b)return;
-  b.report={ts:Date.now(),visitors:val('r_visitors'),issues:val('r_issues'),comment:val('r_comment'),note:val('r_note')};
-  if(val('r_issues').trim()){S.incidents.unshift({id:uid('i'),title:'Ongelma raportissa: '+place(b.placeId).name,type:'Raportti',status:'uusi',date:b.date,sellerId:b.sellerId,placeId:b.placeId,note:val('r_issues')});notify('Uusi poikkeama loppuraportista: '+place(b.placeId).name,'incident')}
-  audit('Päivän loppuraportti','',me().name+' @ '+place(b.placeId).name);save();closeModal();render();toast('Raportti lähetetty');
-};
-ACT['swap-open']=()=>{
-  const b=todayBooking(me().id);if(!b)return;
-  const free=S.sellers.filter(s=>s.id!==me().id&&!S.bookings.some(x=>x.date===b.date&&x.sellerId===s.id));
-  openModal({title:'🔄 Pyydä vuoronvaihtoa',body:`<div class="stack"><div class="muted">${esc(bsum(b))}</div>${fld('Kenen kanssa vaihdat?',sel('w_to',free.map(s=>[s.id,s.name]),free[0]?free[0].id:''))}<div class="muted small">Toinen myyjä hyväksyy ja esihenkilö vahvistaa. Järjestelmä päivittää tiedot vahvistuksen jälkeen.</div></div>`,
-    foot:'<button class="btn" data-act="close">Peruuta</button><button class="btn primary" data-act="swap-save" data-id="'+b.id+'">Lähetä pyyntö</button>'});
-};
-ACT['swap-save']=el=>{
-  const b=booking(el.dataset.id);if(!val('w_to'))return;
-  S.swaps.unshift({id:uid('w'),bookingId:b.id,from:b.sellerId,to:val('w_to'),status:'pyydetty',ts:Date.now()});
-  notify('Vuoronvaihtopyyntö: '+seller(b.sellerId).name+' → '+seller(val('w_to')).name,'swap');audit('Vuoronvaihtoa pyydetty','',bsum(b));save();closeModal();render();toast('Pyyntö lähetetty');
-};
-ACT['swap-accept']=el=>{if(!guard())return;const w=S.swaps.find(x=>x.id===el.dataset.id);w.status='hyvaksytty';audit('Vuoronvaihto hyväksytty (myyjä)','',seller(w.to).name);save();render()};
-ACT['swap-confirm']=el=>{
-  if(!guard())return;const w=S.swaps.find(x=>x.id===el.dataset.id),b=booking(w.bookingId);
-  const c=conflicts(Object.assign({},b,{sellerId:w.to}),b.id).filter(x=>x.level==='error');
-  if(c.length){openModal({title:'🔴 Vaihtoa ei voi vahvistaa',body:confHTML(c),foot:'<button class="btn primary" data-act="close">Selvä</button>'});return}
-  const old=bsum(b);b.sellerId=w.to;w.status='vahvistettu';audit('Vuoronvaihto vahvistettu',old,bsum(b));notify('Vuoronvaihto vahvistettu: '+bsum(b),'swap');save();render();toast('Vaihto vahvistettu, kalenteri päivitetty');
-};
-ACT['swap-reject']=el=>{if(!guard())return;const w=S.swaps.find(x=>x.id===el.dataset.id);w.status='hylatty';audit('Vuoronvaihto hylätty','','');save();render()};
-
-/* ---------- Myyjät ------
+    <div class="card" style="margin-top:12px"><h3>Tulevat vuorot</h3>${upcoming.map(x=>`<div class="li" style="cursor:default"><div class="grow"><b>${fdl(x.date)} · ${tf(x.start)}–${tf(x.end)}</b><span>${esc(place(x.placeId).name)}, ${esc(place(x.placeId).city)}</span></div>${chip(x.status==='tentative'?'tentative':'confirmed')}</div>`).join('')||'<d
