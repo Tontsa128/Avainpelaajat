@@ -9,6 +9,7 @@ import { verifyToken, RateLimiter } from './auth.js';
 import { registerRoutes } from './routes.js';
 import { makeGeocoder } from './geocode.js';
 import { registerImportRoutes } from './import.js';
+import { registerSuperBookerRoutes } from './super-booker.js';
 
 export function loadConfig(overrides = {}) {
   const env = process.env;
@@ -47,6 +48,7 @@ export function createApp(config) {
   const importLimiter = new RateLimiter(20, 60 * 60 * 1000);
   registerRoutes(router, { db, config, limiter, geocoder: makeGeocoder(config) });
   registerImportRoutes(router, { config, limiter: importLimiter });
+  registerSuperBookerRoutes(router, { db, config });
 
   const allowedOrigins = config.corsOrigin === '*' ? null : config.corsOrigin.split(',').map((s) => s.trim());
 
@@ -84,6 +86,12 @@ export function createApp(config) {
   }
 
   function serveStatic(req, res, pathname) {
+    if (req.method === 'GET' && pathname === '/super-buukkaaja.html') {
+      const file = path.join(config.staticDir, 'super-buukkaaja.html');
+      if (!fs.existsSync(file)) { res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' }); return res.end('super-buukkaaja.html puuttuu.'); }
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache', 'content-security-policy': "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self'" });
+      return fs.createReadStream(file).pipe(res);
+    }
     if (req.method !== 'GET' || (pathname !== '/' && pathname !== '/index.html')) {
       res.writeHead(404, { 'content-type': 'text/plain; charset=utf-8' });
       return res.end('Ei löytynyt');
