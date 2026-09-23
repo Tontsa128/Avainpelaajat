@@ -57,5 +57,5 @@ export function queryNear(db,{lat,lon,km=100,kinds=[],limit=200}){
 export function poiStats(db){
   const a=allPois(db),counts={};
   for(const x of a)counts[x.kind]=(counts[x.kind]||0)+1;
-  return {total:a.length,counts};
+  return {total:a.length,counts,byKind:counts,importedAt:new Date().toISOString()};
 }
