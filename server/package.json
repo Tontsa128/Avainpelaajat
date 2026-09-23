@@ -1,0 +1,15 @@
+{
+  "name":"avainpelaaja-os-server",
+  "version":"1.0.0",
+  "private":true,
+  "type":"module",
+  "engines":{"node":">=20"},
+  "scripts":{
+    "start":"node index.js",
+    "dev":"node --watch index.js",
+    "test":"node --test *.test.js",
+    "create-org":"node cli.js create-org",
+    "check":"node --check *.js"
+  },
+  "dependencies":{"better-sqlite3":"^11.10.0"}
+}
