@@ -7,6 +7,7 @@ import { newId } from './util.js';
 import { registerSync } from './sync.js';
 import { POI_KINDS, queryBbox, queryNear, poiStats } from './osm.js';
 import { RateLimiter } from './auth.js';
+import { planForSeller } from './ai-planner.js';
 
 export const ROLES = ['Admin', 'Buukkaaja', 'Esihenkilö', 'Myyjä', 'Raportointikäyttäjä'];
 const WRITERS = ['Admin', 'Buukkaaja', 'Esihenkilö', 'Myyjä'];
@@ -414,6 +415,23 @@ export function registerRoutes(router, { db, config, limiter, geocoder }) {
     if (!geoLimiter.hit(ctx.user.id)) throw new HttpError(429, 'too_many_attempts', 'Liian monta osoitehakua. Yritä myöhemmin uudelleen.');
     const q = reqStr((ctx.body || {}).q, 'q', 3, 200);
     return geocoder(q);
+  });
+
+  /* ---------- AI-suunnittelija: ehdottaa kuukausikalenterin ---------- */
+  router.post('/api/ai/month-plan', { org: true, roles: PLANNERS }, (ctx) => {
+    const b = ctx.body || {};
+    const sellerId = reqStr(b.sellerId, 'sellerId', 1, 120);
+    const seller = store.getEntityRow(db, ctx.orgId, 'sellers', sellerId)?.obj;
+    if (!seller) throw new HttpError(404, 'seller_missing', 'Myyjää ei löydy.');
+    const year = Number(b.year), month = Number(b.month);
+    if (!Number.isInteger(year) || year < 2020 || year > 2100 || !Number.isInteger(month) || month < 1 || month > 12) throw bad('Vuosi tai kuukausi on virheellinen.');
+    const places = store.listEntity(db, ctx.orgId, 'places');
+    const bookings = store.listEntity(db, ctx.orgId, 'bookings');
+    const salesHistory = store.listRecords(db, ctx.orgId, 'time').map((x) => ({ ...x, sales: x.sales ?? x.salesCount ?? 0, hours: x.hours ?? x.workHours ?? 0, placeId: x.placeId }));
+    return planForSeller({ seller, places, bookings, salesHistory, year, month, options: {
+      radiusKm: Number(b.radiusKm || seller.radiusKm || 100), minBlockDays: Number(b.minBlockDays || 1), maxBlockDays: Number(b.maxBlockDays || 2),
+      avoidWeekends: !!b.avoidWeekends, maxCandidates: Number(b.maxCandidates || 50),
+    }});
   });
 
   /* ---------- Työtila: koko datan haku ja synkronointi (käyttöliittymä käyttää tätä) ---------- */
