@@ -15,7 +15,9 @@ export function openDb(file){
     CREATE INDEX IF NOT EXISTS idx_entities_kind ON entities(org_id,kind,pos);
     CREATE INDEX IF NOT EXISTS idx_records_kind ON records(org_id,kind,pos);
     CREATE INDEX IF NOT EXISTS idx_audit_org ON audit_log(org_id,id DESC);
+    CREATE TABLE IF NOT EXISTS pois(id TEXT PRIMARY KEY,name TEXT NOT NULL,city TEXT,kind TEXT,lat REAL NOT NULL,lon REAL NOT NULL,data TEXT NOT NULL);
   `);
   return db;
 }
 export function tx(db,fn){const f=db.transaction(fn);return f();}
+
