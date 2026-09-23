@@ -1,0 +1,1 @@
+export function statusBadge(status){const map={free:['🟢','Vapaa'],reserved:['🔵','Varattu'],working:['🟡','Työn alla'],problem:['🔴','Ongelma']};const [icon,label]=map[status]||map.free;return `<span class="ap-status ap-status-${status}">${icon} ${label}</span>`;}
